@@ -13,7 +13,8 @@ The script serves as both a test of the MCP Blueprint manipulation functionality
 and a basic example of how to programmatically create and modify Blueprints
 through the MCP interface.
 """
-
+import random
+import string
 import sys
 import os
 import time
@@ -77,11 +78,13 @@ def main():
         # Connect to Unreal MCP server
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(("127.0.0.1", 55557))
-        
+
+        random_suffix = ''.join(random.choices(string.ascii_letters + string.digits, k=3))
+        bp_name_to_use = "TestBP_" + random_suffix
         try:
             # Step 1: Create a blueprint
             bp_params = {
-                "name": "TestBP",
+                "name": bp_name_to_use,
                 "parent_class": "Actor"
             }
             
@@ -100,8 +103,8 @@ def main():
             
             # Step 2: Add a static mesh component
             component_params = {
-                "blueprint_name": "TestBP",
-                "component_type": "StaticMeshComponent",
+                "blueprint_name": bp_name_to_use,
+                "component_type": "/Script/Engine.StaticMeshComponent",
                 "component_name": "CubeVisual",
                 "location": [0.0, 0.0, 0.0],
                 "rotation": [0.0, 0.0, 0.0],
@@ -128,7 +131,7 @@ def main():
             sock.connect(("127.0.0.1", 55557))
             
             mesh_params = {
-                "blueprint_name": "TestBP",
+                "blueprint_name": bp_name_to_use,
                 "component_name": "CubeVisual",
                 "static_mesh": "/Engine/BasicShapes/Cube.Cube"
             }
@@ -148,7 +151,7 @@ def main():
             sock.connect(("127.0.0.1", 55557))
             
             compile_params = {
-                "blueprint_name": "TestBP"
+                "blueprint_name": bp_name_to_use
             }
             
             response = send_command(sock, "compile_blueprint", compile_params)
@@ -166,7 +169,7 @@ def main():
             sock.connect(("127.0.0.1", 55557))
             
             spawn_params = {
-                "blueprint_name": "TestBP",
+                "blueprint_name": bp_name_to_use,
                 "actor_name": "TestBPInstance",
                 "location": [0.0, 0.0, 100.0],  # 100 units up
                 "rotation": [0.0, 0.0, 0.0],

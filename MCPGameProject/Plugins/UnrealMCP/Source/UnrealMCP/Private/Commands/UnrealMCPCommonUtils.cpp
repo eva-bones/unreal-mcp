@@ -153,7 +153,8 @@ UBlueprint* FUnrealMCPCommonUtils::FindBlueprint(const FString& BlueprintName)
 
 UBlueprint* FUnrealMCPCommonUtils::FindBlueprintByName(const FString& BlueprintName)
 {
-    FString AssetPath = TEXT("/Game/Blueprints/") + BlueprintName;
+    // FString AssetPath = TEXT("/Game/Blueprints/") + BlueprintName;
+    FString AssetPath = TEXT("/Game/Blueprints/") + BlueprintName + TEXT(".") + BlueprintName;
     return LoadObject<UBlueprint>(nullptr, *AssetPath);
 }
 

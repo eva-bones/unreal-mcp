@@ -98,10 +98,11 @@ def create_test_cube(name: str, location: list[float]) -> Optional[Dict[str, Any
         "type": "StaticMeshActor",
         "location": location,
         "rotation": [0.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
+        "scale": [100.0, 100.0, 100.0],
+        "static_mesh": "/Engine/BasicShapes/Cube.Cube"
     }
     
-    response = send_command("create_actor", cube_params)
+    response = send_command("spawn_actor", cube_params)
     if not response or response.get("status") != "success":
         logger.error(f"Failed to create cube: {response}")
         return None
@@ -180,7 +181,7 @@ def main():
             cube1_name,
             location=[0.0, 0.0, 200.0],
             rotation=[0.0, 45.0, 0.0],
-            scale=[2.0, 2.0, 2.0]
+            scale=[100.0, 100.0, 100.0]
         )
         if not result:
             logger.error("Failed to modify first test cube transform")

@@ -3,7 +3,8 @@
 Test script for component reference in blueprints via MCP.
 This tests the fix for the component reference node issue.
 """
-
+import random
+import string
 import sys
 import os
 import time
@@ -18,6 +19,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("TestComponentReference")
+
+random_suffix = ''.join(random.choices(string.ascii_letters + string.digits, k=3))
 
 def send_command(sock: socket.socket, command: str, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Send a command to the Unreal MCP server and get the response."""
@@ -70,7 +73,7 @@ def main():
         
         # Step 1: Create a blueprint
         bp_params = {
-            "name": "TestCompRefBP",
+            "name": "TestCompRefBP_"+random_suffix,
             "parent_class": "Actor"
         }
         
@@ -83,8 +86,8 @@ def main():
         
         # Step 2: Add a static mesh component
         component_params = {
-            "blueprint_name": "TestCompRefBP",
-            "component_type": "StaticMesh",
+            "blueprint_name": "TestCompRefBP_"+random_suffix,
+            "component_type": "/Script/Engine.StaticMeshComponent",
             "component_name": "TestMesh",
             "location": [0.0, 0.0, 0.0],
             "rotation": [0.0, 0.0, 0.0],
@@ -101,15 +104,56 @@ def main():
             return
             
         logger.info("Static mesh component added successfully!")
-        
+
+
+
+        sock.close()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(("127.0.0.1", 55557))
+
+        logger.info("Setting static mesh for the new component...")
+        mesh_params = {
+            "blueprint_name": "TestCompRefBP_"+random_suffix,  # Use the same blueprint name variable
+            "component_name": "TestMesh",
+            "static_mesh": "/Engine/BasicShapes/Cube.Cube"
+        }
+
+        response = send_command(sock, "set_static_mesh_properties", mesh_params)
+
+        if not response or response.get("status") != "success":
+            logger.error(f"Failed to set static mesh properties: {response}")
+            return
+
+        logger.info("Static mesh properties set successfully!")
+
+        sock.close()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(("127.0.0.1", 55557))
+
+        logger.info("Enabling physics for the new component...")
+        physics_params = {
+            "blueprint_name": "TestCompRefBP_"+random_suffix,  # Use the same blueprint name variable
+            "component_name": "TestMesh",
+            "simulate_physics": True,
+            "gravity_enabled": True
+        }
+
+        response = send_command(sock, "set_physics_properties", physics_params)
+
+        if not response or response.get("status") != "success":
+            logger.error(f"Failed to set physics properties: {response}")
+            return
+
+        logger.info("Physics properties set successfully!")
+
         # Step 3: Add an event (BeginPlay)
         sock.close()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(("127.0.0.1", 55557))
         
         begin_play_params = {
-            "blueprint_name": "TestCompRefBP",
-            "event_type": "BeginPlay",
+            "blueprint_name": "TestCompRefBP_"+random_suffix,
+            "event_name": "ReceiveBeginPlay",
             "node_position": [0, 0]
         }
         
@@ -120,45 +164,28 @@ def main():
             
         begin_play_node_id = response.get("result", {}).get("node_id")
         logger.info(f"BeginPlay event node added successfully with ID: {begin_play_node_id}")
-        
-        # Step 4: Create component reference node
-        sock.close()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(("127.0.0.1", 55557))
-        
-        get_component_params = {
-            "blueprint_name": "TestCompRefBP",
-            "component_name": "TestMesh",
-            "node_position": [200, 0]
-        }
-        
-        response = send_command(sock, "add_blueprint_get_self_component_reference", get_component_params)
-        if not response or response.get("status") != "success":
-            logger.error(f"Failed to add component reference node: {response}")
-            return
-            
-        comp_ref_node_id = response.get("result", {}).get("node_id")
-        logger.info(f"Component reference node added successfully with ID: {comp_ref_node_id}")
-        
+
         # Step 5: Add AddForce function node
         sock.close()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(("127.0.0.1", 55557))
-        
+
         function_params = {
-            "blueprint_name": "TestCompRefBP",
-            "function_name": "AddForce",
+            "blueprint_name": "TestCompRefBP_"+random_suffix,
+            "function_name": "AddForce",  # The function we want to call
+            "target": "TestMesh",  # The component we want to call it on
             "params": {
                 "Force": [0, 0, 1000]
             },
             "node_position": [400, 0]
         }
-        
+
         response = send_command(sock, "add_blueprint_function_node", function_params)
+
         if not response or response.get("status") != "success":
             logger.error(f"Failed to add AddForce function node: {response}")
             return
-            
+
         function_node_id = response.get("result", {}).get("node_id")
         logger.info(f"AddForce function node added successfully with ID: {function_node_id}")
         
@@ -168,7 +195,7 @@ def main():
         sock.connect(("127.0.0.1", 55557))
         
         connect_exec_params = {
-            "blueprint_name": "TestCompRefBP",
+            "blueprint_name": "TestCompRefBP_"+random_suffix,
             "source_node_id": begin_play_node_id,
             "source_pin": "Then",  # Execution pin on BeginPlay
             "target_node_id": function_node_id,
@@ -182,52 +209,13 @@ def main():
             
         logger.info("Connected BeginPlay to AddForce execution pins!")
         
-        # Step 7: Connect component reference to AddForce target
-        sock.close()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(("127.0.0.1", 55557))
-        
-        # In UE5.5, the output pin of a component reference is named after the component itself
-        component_name = "TestMesh"  # Use the same name as defined in the component
-        connect_target_params = {
-            "blueprint_name": "TestCompRefBP",
-            "source_node_id": comp_ref_node_id,
-            "source_pin": component_name,  # Use component name as pin name
-            "target_node_id": function_node_id,
-            "target_pin": "Target"  # Target pin on AddForce
-        }
-        
-        response = send_command(sock, "connect_blueprint_nodes", connect_target_params)
-        logger.warning(f"Pin connection response: {response}")
-        if not response or response.get("status") != "success" or not response.get("result", {}).get("success", False):
-            logger.error(f"Failed to connect component reference: {response}")
-            # Try alternate pin names if needed
-            fallback_pin_names = ["Value", "ReturnValue"]
-            for pin_name in fallback_pin_names:
-                logger.info(f"Trying with alternative pin name: '{pin_name}'")
-                connect_target_params["source_pin"] = pin_name
-                
-                sock.close()
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect(("127.0.0.1", 55557))
-                
-                response = send_command(sock, "connect_blueprint_nodes", connect_target_params)
-                if response and response.get("status") == "success" and response.get("result", {}).get("success", False):
-                    logger.info(f"Successfully connected using pin name: '{pin_name}'")
-                    break
-            else:
-                logger.error("Failed to connect with all pin name options")
-                return
-                
-        logger.info("Connected component reference to AddForce target!")
-        
         # Step 8: Compile Blueprint
         sock.close()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(("127.0.0.1", 55557))
         
         compile_params = {
-            "blueprint_name": "TestCompRefBP"
+            "blueprint_name": "TestCompRefBP_"+random_suffix
         }
         
         response = send_command(sock, "compile_blueprint", compile_params)
@@ -243,7 +231,7 @@ def main():
         sock.connect(("127.0.0.1", 55557))
         
         spawn_params = {
-            "blueprint_name": "TestCompRefBP",
+            "blueprint_name": "TestCompRefBP_"+random_suffix,
             "actor_name": "TestCompRefActor",
             "location": [0.0, 0.0, 100.0],
             "rotation": [0.0, 0.0, 0.0],

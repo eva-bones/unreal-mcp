@@ -20,6 +20,7 @@
 #include "Subsystems/EditorActorSubsystem.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
+#include "EditorAssetLibrary.h"
 
 FUnrealMCPEditorCommands::FUnrealMCPEditorCommands()
 {
@@ -183,7 +184,32 @@ TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleSpawnActor(const TShared
 
     if (ActorType == TEXT("StaticMeshActor"))
     {
-        NewActor = World->SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), Location, Rotation, SpawnParams);
+        AStaticMeshActor* NewMeshActor = World->SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), Location, Rotation, SpawnParams);
+        NewActor = NewMeshActor;
+
+        if (NewMeshActor)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("HandleSpawnActor: Checking for 'static_mesh' parameter..."));
+            FString MeshPath;
+            if (Params->TryGetStringField(TEXT("static_mesh"), MeshPath))
+            {
+                UE_LOG(LogTemp, Warning, TEXT("HandleSpawnActor: Found mesh path: %s"), *MeshPath);
+                UStaticMesh* Mesh = Cast<UStaticMesh>(UEditorAssetLibrary::LoadAsset(MeshPath));
+                if (Mesh)
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("HandleSpawnActor: Successfully loaded mesh, SETTING IT NOW."));
+                    NewMeshActor->GetStaticMeshComponent()->SetStaticMesh(Mesh);
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Error, TEXT("HandleSpawnActor: FAILED to load mesh from path: %s"), *MeshPath);
+                }
+            }
+            else
+            {
+                UE_LOG(LogTemp, Warning, TEXT("HandleSpawnActor: 'static_mesh' parameter NOT FOUND in request."));
+            }
+        }
     }
     else if (ActorType == TEXT("PointLight"))
     {

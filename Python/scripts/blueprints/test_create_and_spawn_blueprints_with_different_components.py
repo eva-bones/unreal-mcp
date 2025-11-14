@@ -31,7 +31,8 @@ Each test follows a consistent workflow:
 The script provides detailed logging and error handling for each operation,
 making it useful both as a test suite and as an example of the MCP Blueprint API usage.
 """
-
+import random
+import string
 import sys
 import os
 import time
@@ -46,6 +47,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("TestComponentCreation")
+
+random_suffix = ''.join(random.choices(string.ascii_letters + string.digits, k=3))
 
 def send_command(command: str, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Send a command to the Unreal MCP server and get the response."""
@@ -230,13 +233,13 @@ def test_static_mesh_components():
     
     # Test cube mesh
     logger.info("Testing cube mesh component...")
-    bp_cube_name = "BP_CubeMesh"
+    bp_cube_name = "BP_CubeMesh_"+random_suffix
     if not create_blueprint(bp_cube_name):
         return False
     
     if not add_component(
         blueprint_name=bp_cube_name,
-        component_type="StaticMeshComponent",
+        component_type="/Script/Engine.StaticMeshComponent",
         component_name="CubeMeshComponent",
         location=[0.0, 0.0, 0.0],
         scale=[1.0, 1.0, 1.0],
@@ -259,13 +262,13 @@ def test_static_mesh_components():
     
     # Test sphere mesh
     logger.info("Testing sphere mesh component...")
-    bp_sphere_name = "BP_SphereMesh"
+    bp_sphere_name = "BP_SphereMesh_"+random_suffix
     if not create_blueprint(bp_sphere_name):
         return False
     
     if not add_component(
         blueprint_name=bp_sphere_name,
-        component_type="StaticMeshComponent",
+        component_type="/Script/Engine.StaticMeshComponent",
         component_name="SphereMeshComponent",
         location=[0.0, 0.0, 0.0],
         scale=[1.0, 1.0, 1.0],
@@ -288,13 +291,13 @@ def test_static_mesh_components():
     
     # Test cylinder mesh
     logger.info("Testing cylinder mesh component...")
-    bp_cylinder_name = "BP_CylinderMesh"
+    bp_cylinder_name = "BP_CylinderMesh_"+random_suffix
     if not create_blueprint(bp_cylinder_name):
         return False
     
     if not add_component(
         blueprint_name=bp_cylinder_name,
-        component_type="StaticMeshComponent",
+        component_type="/Script/Engine.StaticMeshComponent",
         component_name="CylinderMeshComponent",
         location=[0.0, 0.0, 0.0],
         rotation=[0.0, 0.0, 90.0],  # Rotated 90 degrees
@@ -324,13 +327,13 @@ def test_collision_components():
     
     # Test box collision component
     logger.info("Testing box collision component...")
-    bp_box_name = "BP_BoxCollision"
+    bp_box_name = "BP_BoxCollision_"+random_suffix
     if not create_blueprint(bp_box_name):
         return False
     
     if not add_component(
         blueprint_name=bp_box_name,
-        component_type="BoxComponent",
+        component_type="/Script/Engine.BoxComponent",
         component_name="BoxCollisionComponent",
         location=[0.0, 0.0, 0.0],
         scale=[1.0, 1.0, 1.0],
@@ -355,7 +358,7 @@ def test_collision_components():
     
     if not add_component(
         blueprint_name=bp_sphere_name,
-        component_type="SphereComponent",
+        component_type="/Script/Engine.SphereComponent",
         component_name="SphereCollisionComponent",
         location=[0.0, 0.0, 0.0],
         scale=[1.0, 1.0, 1.0],
@@ -380,7 +383,7 @@ def test_scene_component_hierarchy():
     logger.info("\n=== Testing Scene Component Hierarchy ===\n")
     
     # Create a blueprint for the hierarchy test
-    bp_name = "BP_ComponentHierarchy"
+    bp_name = "BP_ComponentHierarchy_"+random_suffix
     if not create_blueprint(bp_name):
         return False
     
@@ -388,7 +391,7 @@ def test_scene_component_hierarchy():
     logger.info("Adding root SceneComponent...")
     if not add_component(
         blueprint_name=bp_name,
-        component_type="SceneComponent",
+        component_type="/Script/Engine.SceneComponent",
         component_name="RootSceneComponent",
         location=[0.0, 0.0, 0.0]
     ):
@@ -404,7 +407,7 @@ def test_scene_component_hierarchy():
     cube_component_name = "ChildCubeMeshComponent"
     if not add_component(
         blueprint_name=bp_name,
-        component_type="StaticMeshComponent",
+        component_type="/Script/Engine.StaticMeshComponent",
         component_name=cube_component_name,
         location=[50.0, 0.0, 0.0]
     ):
@@ -433,7 +436,7 @@ def test_scene_component_hierarchy():
     sphere_component_name = "ChildSphereMeshComponent"
     if not add_component(
         blueprint_name=bp_name,
-        component_type="StaticMeshComponent",
+        component_type="/Script/Engine.StaticMeshComponent",
         component_name=sphere_component_name,
         location=[-50.0, 0.0, 0.0]
     ):
